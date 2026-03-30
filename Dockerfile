@@ -25,7 +25,7 @@ RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/downloa
 WORKDIR /opt/render/project/src
 
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 COPY . .
 
