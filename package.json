@@ -1,0 +1,22 @@
+{
+  "name": "docker-learnin",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@ngrok/ngrok": "^1.7.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "ngrok": "^4.3.3",
+    "portfinder": "^1.0.32"
+  }
+}
