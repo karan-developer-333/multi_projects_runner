@@ -4,7 +4,6 @@ LABEL maintainer="Project Runner"
 LABEL description="Multi-project runner with tunnel support"
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV NODE_ENV=production
 ENV PORT=10000
 
 RUN apt-get update && apt-get install -y \
