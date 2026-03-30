@@ -11,8 +11,6 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
-    golang-go \
-    cargo \
     curl \
     wget \
     git \
@@ -20,11 +18,9 @@ RUN apt-get update && apt-get install -y \
     xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://deb.dl.cloudflare.com/cloudflare-main.gpg | tee /usr/share/keyrings/cloudflare-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/cloudflare-archive-keyring.gpg] https://deb.dl.cloudflare.com/cloudflared ${CLOUDFLARE_DISTRO:-$(. /etc/os-release; echo $VERSION_ID)} main" | tee /etc/apt/sources.list.d/cloudflared.list \
-    && apt-get update \
-    && apt-get install -y cloudflared \
-    && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared \
+    && chmod +x /usr/local/bin/cloudflared \
+    && cloudflared --version
 
 WORKDIR /opt/render/project/src
 
