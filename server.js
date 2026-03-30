@@ -10,6 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+const projectLogs = new Map();
 
 app.use(cors());
 app.use(express.json());
@@ -18,13 +19,31 @@ app.get('/', (req, res) => {
     const projects = listRunningProjects();
     res.json({
         message: 'Project Runner Server',
+        version: '2.0.0',
         runningProjects: projects,
         endpoints: {
             'GET /': 'Server info',
+            'GET /health': 'Server health status',
+            'GET /projects': 'List all projects in ./projects folder',
             'GET /projects/:id': 'Start/access project by ID',
             'GET /projects/:id/status': 'Get project status',
+            'GET /projects/:id/logs': 'Get project startup logs',
             'POST /projects/:id/stop': 'Stop a running project',
-            'GET /projects': 'List all projects in ./projects folder'
+            'POST /projects/:id/restart': 'Restart a project',
+            'POST /projects/stop-all': 'Stop all running projects'
+        }
+    });
+});
+
+app.get('/health', (req, res) => {
+    const projects = listRunningProjects();
+    res.json({
+        status: 'ok',
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        projects: {
+            count: projects.length,
+            running: projects
         }
     });
 });
@@ -48,7 +67,10 @@ app.get('/projects', async (req, res) => {
                             isDirectory: true,
                             status: status.status,
                             language: langInfo ? langInfo.language : 'unknown',
-                            ngrokUrl: status.ngrokUrl || null
+                            isStreamlit: langInfo?.isStreamlit || false,
+                            tunnelUrl: status.tunnelUrl || null,
+                            localUrl: status.localUrl || null,
+                            tunnelProvider: status.tunnelProvider || null
                         });
                     } catch {
                         projects.push({
@@ -56,7 +78,10 @@ app.get('/projects', async (req, res) => {
                             isDirectory: true,
                             status: status.status,
                             language: 'unknown',
-                            ngrokUrl: null
+                            isStreamlit: false,
+                            tunnelUrl: null,
+                            localUrl: null,
+                            tunnelProvider: null
                         });
                     }
                 }
@@ -83,10 +108,11 @@ app.get('/projects/:id', async (req, res) => {
             projectId,
             status: 'running',
             port: existingStatus.port,
-            ngrokUrl: existingStatus.ngrokUrl,
-            localUrl: `http://localhost:${existingStatus.port}`,
+            tunnelUrl: existingStatus.tunnelUrl,
+            localUrl: existingStatus.localUrl,
+            tunnelProvider: existingStatus.tunnelProvider || null,
             message: 'Project already running',
-            iframeUrl: existingStatus.ngrokUrl || `http://localhost:${existingStatus.port}`
+            iframeUrl: existingStatus.tunnelUrl || existingStatus.localUrl
         });
     }
     
@@ -103,24 +129,23 @@ app.get('/projects/:id', async (req, res) => {
         
         console.log(`[${projectId}] Detected ${langInfo.language} project (via ${langInfo.detectedFile})`);
         
-        if (langInfo.isStreamlit) {
-            langInfo.config.isStreamlit = true;
-        }
-        
-        const result = await startProject(projectId, projectPath, langInfo.config);
+        const result = await startProject(projectId, projectPath, langInfo.config, langInfo.isStreamlit);
         
         if (result.success) {
             res.json({
                 success: true,
                 projectId,
                 language: langInfo.language,
+                isStreamlit: langInfo.isStreamlit || false,
                 status: result.status,
                 port: result.port,
-                ngrokUrl: result.ngrokUrl,
+                tunnelUrl: result.tunnelUrl,
                 localUrl: result.localUrl,
                 pid: result.pid,
                 message: result.message,
-                iframeUrl: result.ngrokUrl || result.localUrl
+                tunnelProvider: result.tunnelUrl?.includes('trycloudflare') ? 'cloudflare' : 
+                             result.tunnelUrl?.includes('ngrok') ? 'ngrok' : null,
+                iframeUrl: result.tunnelUrl || result.localUrl
             });
         } else {
             res.status(500).json({
@@ -152,6 +177,17 @@ app.get('/projects/:id/status', (req, res) => {
     });
 });
 
+app.get('/projects/:id/logs', (req, res) => {
+    const projectId = req.params.id;
+    const logs = projectLogs.get(projectId) || [];
+    
+    res.json({
+        projectId,
+        logs: logs,
+        hasLogs: logs.length > 0
+    });
+});
+
 app.post('/projects/:id/stop', async (req, res) => {
     const projectId = req.params.id;
     
@@ -160,6 +196,41 @@ app.post('/projects/:id/stop', async (req, res) => {
         res.json({
             projectId,
             ...result
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            projectId,
+            error: error.message
+        });
+    }
+});
+
+app.post('/projects/:id/restart', async (req, res) => {
+    const projectId = req.params.id;
+    const projectsDir = join(__dirname, 'projects');
+    const projectPath = join(projectsDir, projectId);
+    
+    try {
+        await stopProject(projectId);
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const langInfo = await detectLanguage(projectPath);
+        
+        if (!langInfo) {
+            return res.status(400).json({
+                success: false,
+                error: 'Could not detect project language'
+            });
+        }
+        
+        const result = await startProject(projectId, projectPath, langInfo.config, langInfo.isStreamlit);
+        
+        res.json({
+            ...result,
+            projectId,
+            message: result.success ? `Project restarted. ${result.message}` : result.message
         });
     } catch (error) {
         res.status(500).json({

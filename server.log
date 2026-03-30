@@ -1,0 +1,26 @@
+Project Runner Server running on port 3000
+Access at: http://localhost:3000
+Projects directory: /home/karanpc/Desktop/docker learnin/projects
+[project1] Detected nodejs project (via package.json)
+[project1] Setting up project environment...
+[project1] Setup complete, starting project...
+[project1] VITE v8.0.3  ready in 198 ms
+[project1] ➜  Local:   http://localhost:3002/
+  ➜  Network: http://10.38.214.34:3002/
+[project1] Starting Cloudflare Tunnel...
+(node:113055) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[project1] Cloudflare Tunnel established at https://nirvana-resulting-heart-toilet.trycloudflare.com
+[project2] Detected python project (via main.py)
+[project2] Setting up project environment...
+[python] Installing requirements...
+[python] Python environment ready
+[project2] Setup complete, starting project...
+[project2] You can now view your Streamlit app in your browser.
+
+  Local URL:
+[project2] http://localhost:3003
+  Network URL: http://10.38.214.34:3003
+  External URL: http://223.184.250.100:3003
+[project2] Starting Cloudflare Tunnel...
+[project2] Cloudflare Tunnel established at https://ink-ebony-tracy-pattern.trycloudflare.com

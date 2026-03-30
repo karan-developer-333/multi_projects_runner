@@ -1,0 +1,15 @@
+{
+  "watch": ["server.js", "lib/", "routes/", ".env"],
+  "ignore": [
+    "projects/**",
+    "node_modules/**",
+    "*.log",
+    ".project-lock",
+    ".project-meta/**"
+  ],
+  "ext": "js,json,mjs,cjs",
+  "delay": "1000",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}

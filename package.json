@@ -1,13 +1,14 @@
 {
-  "name": "docker-learnin",
-  "version": "1.0.0",
-  "description": "",
+  "name": "project-runner-server",
+  "version": "2.0.0",
+  "description": "Project runner server with tunnel support (Cloudflare + ngrok)",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon"
   },
-  "keywords": [],
+  "keywords": ["project-runner", "tunnel", "cloudflare", "ngrok"],
   "author": "",
   "license": "ISC",
   "type": "module",
@@ -16,7 +17,9 @@
     "cors": "^2.8.6",
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
-    "ngrok": "^4.3.3",
     "portfinder": "^1.0.32"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }
