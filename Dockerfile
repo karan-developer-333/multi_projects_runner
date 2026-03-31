@@ -6,6 +6,7 @@ LABEL description="Multi-project runner with tunnel support (v3.0.0)"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NODE_ENV=production
 ENV PORT=10000
+ENV HOME=/app
 
 RUN apt-get update && apt-get install -y \
     python3 \
@@ -32,8 +33,8 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY src/ ./src/
 COPY lib/ ./lib/
-COPY data/ ./data/ 2>/dev/null || true
 
+RUN mkdir -p data && touch data/.gitkeep
 RUN mkdir -p projects
 
 EXPOSE 10000
