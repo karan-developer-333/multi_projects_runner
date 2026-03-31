@@ -69,7 +69,39 @@ projects/
     └── main.go
 ```
 
-## Render Deployment
+## Hugging Face Projects
+
+You can deploy Hugging Face models and apps in your projects. For Python projects, add `transformers`, `torch`, etc. to your `requirements.txt`.
+
+Example project structure for a Hugging Face app:
+
+```
+projects/hf-project/
+├── main.py          # Your Hugging Face app code
+├── requirements.txt # Include transformers, torch, etc.
+└── model/           # Optional: local model files
+```
+
+To use Hugging Face models, ensure your `requirements.txt` includes:
+
+```
+transformers
+torch
+huggingface_hub
+```
+
+Then, in your `main.py`, you can load and use models like:
+
+```python
+from transformers import pipeline
+
+# Example: text generation
+generator = pipeline('text-generation', model='gpt2')
+result = generator("Hello, I'm a language model")
+print(result)
+```
+
+For Streamlit apps with Hugging Face, use the streamlit option.
 
 1. Connect GitHub repo to Render
 2. Set build command: `npm install`

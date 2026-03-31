@@ -1,11 +1,22 @@
+FROM node:20-slim AS builder
+
+WORKDIR /build
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY src/ ./src/
+COPY lib/ ./lib/
+
 FROM node:20-slim
 
 LABEL maintainer="Project Runner"
-LABEL description="Multi-project runner with tunnel support (v3.0.0)"
+LABEL description="Project Runner Server v3.0.0 - Production Build"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NODE_ENV=production
 ENV PORT=10000
+ENV ENABLE_LOGGING=false
 
 RUN apt-get update && apt-get install -y \
     python3 \
@@ -22,24 +33,19 @@ RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/downloa
     && chmod +x /usr/local/bin/cloudflared \
     && cloudflared --version
 
-RUN curl -fsSL https://bun.sh/install | bash \
-    && ln -s /root/.bun/bin/bun /usr/local/bin/bun
+COPY --from=builder /build/node_modules /app/node_modules
+COPY --from=builder /build/src /app/src
+COPY --from=builder /build/lib /app/lib
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
-
-COPY src/ ./src/
-COPY lib/ ./lib/
-COPY data/ ./data/ 2>/dev/null || true
-COPY .env.example ./
-
-RUN mkdir -p projects
+RUN mkdir -p projects data && chmod 755 projects data
 
 EXPOSE 10000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:10000/health || exit 1
+
+USER node
 
 CMD ["node", "src/server.js"]

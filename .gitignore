@@ -1,2 +1,36 @@
-/node_modules
+# Dependencies
+node_modules/
+
+# Environment
 .env
+.env.local
+.env.*.local
+
+# Data (user projects - never commit)
+data/
+projects/
+
+# Logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build
+dist/
+build/
+
+# Test
+coverage/
+
+# Ai plan area
+.opencode

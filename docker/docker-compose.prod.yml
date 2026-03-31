@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  project-runner:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: project-runner
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+    environment:
+      - NODE_ENV=production
+      - PORT=10000
+      - TUNNEL_PROVIDER=cloudflare,ngrok
+      - ENABLE_LOGGING=true
+    volumes:
+      - project-data:/app/data
+      - project-projects:/app/projects
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:10000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - project-runner-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+volumes:
+  project-data:
+    driver: local
+  project-projects:
+    driver: local
+
+networks:
+  project-runner-network:
+    driver: bridge

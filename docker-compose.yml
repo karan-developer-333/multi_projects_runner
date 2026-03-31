@@ -2,26 +2,22 @@ version: '3.8'
 
 services:
   project-runner:
-    build: .
-    container_name: multi-projects-runner
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: project-runner-dev
     ports:
       - "10000:10000"
-    volumes:
-      - ./projects:/opt/render/project/src/projects
-      - project-runner-cache:/root/.npm
-      - project-runner-pip:/root/.cache/pip
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - PORT=10000
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:10000/api/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - ENABLE_LOGGING=true
+    volumes:
+      - ./projects:/app/projects
+      - ./data:/app/data
+    networks:
+      - project-runner-network
 
-volumes:
-  project-runner-cache:
-  project-runner-pip:
+networks:
+  project-runner-network:
+    driver: bridge
