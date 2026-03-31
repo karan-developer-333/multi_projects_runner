@@ -33,7 +33,6 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY src/ ./src/
 COPY lib/ ./lib/
 COPY data/ ./data/ 2>/dev/null || true
-COPY .env.example ./
 
 RUN mkdir -p projects
 
