@@ -10,35 +10,102 @@ initStore();
 
 export function setupRoutes(app, projectsPath) {
 
+    app.get('/api/projects', asyncHandler(async (req, res) => {
+        const { readdir } = await import('node:fs/promises');
+        
+        try {
+            const entries = await readdir(projectsPath, { withFileTypes: true });
+            const storeProjects = getAllProjects();
+            const storeMap = new Map(storeProjects.map(p => [p.folder, p]));
+            
+            const projects = [];
+            
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    const folderId = entry.name;
+                    const status = getProjectStatus(folderId);
+                    const storeData = storeMap.get(folderId);
+                    
+                    try {
+                        const langInfo = await detectLanguage(`${projectsPath}/${entry.name}`);
+                        projects.push({
+                            id: folderId,
+                            folder: folderId,
+                            name: storeData?.name || folderId,
+                            isDeployed: !!storeData,
+                            status: status.status,
+                            language: langInfo?.language || storeData?.language || 'unknown',
+                            isStreamlit: langInfo?.isStreamlit || storeData?.metadata?.isStreamlit || false,
+                            tunnelUrl: status.tunnelUrl || null,
+                            localUrl: status.localUrl || null,
+                            tunnelProvider: status.tunnelProvider || null,
+                            createdAt: storeData?.createdAt || null,
+                            updatedAt: storeData?.updatedAt || null
+                        });
+                    } catch {
+                        projects.push({
+                            id: folderId,
+                            folder: folderId,
+                            name: storeData?.name || folderId,
+                            isDeployed: !!storeData,
+                            status: status.status,
+                            language: storeData?.language || 'unknown',
+                            isStreamlit: storeData?.metadata?.isStreamlit || false,
+                            tunnelUrl: null,
+                            localUrl: null,
+                            tunnelProvider: null,
+                            createdAt: storeData?.createdAt || null,
+                            updatedAt: storeData?.updatedAt || null
+                        });
+                    }
+                }
+            }
+            
+            return ApiResponse.success(res, { projects });
+        } catch {
+            return ApiResponse.notFound(res, 'Projects directory not found');
+        }
+    }));
+
     app.get('/projects', asyncHandler(async (req, res) => {
         const { readdir } = await import('node:fs/promises');
         
         try {
             const entries = await readdir(projectsPath, { withFileTypes: true });
+            const storeProjects = getAllProjects();
+            const storeMap = new Map(storeProjects.map(p => [p.folder, p]));
+            
             const projects = [];
             
             for (const entry of entries) {
                 if (entry.isDirectory()) {
-                    const status = getProjectStatus(entry.name);
+                    const folderId = entry.name;
+                    const status = getProjectStatus(folderId);
+                    const storeData = storeMap.get(folderId);
+                    
                     try {
                         const langInfo = await detectLanguage(`${projectsPath}/${entry.name}`);
                         projects.push({
-                            id: entry.name,
-                            isDirectory: true,
+                            id: folderId,
+                            folder: folderId,
+                            name: storeData?.name || folderId,
+                            isDeployed: !!storeData,
                             status: status.status,
-                            language: langInfo?.language || 'unknown',
-                            isStreamlit: langInfo?.isStreamlit || false,
+                            language: langInfo?.language || storeData?.language || 'unknown',
+                            isStreamlit: langInfo?.isStreamlit || storeData?.metadata?.isStreamlit || false,
                             tunnelUrl: status.tunnelUrl || null,
                             localUrl: status.localUrl || null,
                             tunnelProvider: status.tunnelProvider || null
                         });
                     } catch {
                         projects.push({
-                            id: entry.name,
-                            isDirectory: true,
+                            id: folderId,
+                            folder: folderId,
+                            name: storeData?.name || folderId,
+                            isDeployed: !!storeData,
                             status: status.status,
-                            language: 'unknown',
-                            isStreamlit: false,
+                            language: storeData?.language || 'unknown',
+                            isStreamlit: storeData?.metadata?.isStreamlit || false,
                             tunnelUrl: null,
                             localUrl: null,
                             tunnelProvider: null
@@ -69,7 +136,29 @@ export function setupRoutes(app, projectsPath) {
             }, 'Project already running');
         }
         
-        const langInfo = await detectLanguage(projectPath);
+        const storeData = getAllProjects().find(p => p.folder === id);
+        let langInfo = null;
+        
+        try {
+            langInfo = await detectLanguage(projectPath);
+        } catch (err) {
+            console.log(`[${id}] Language detection from filesystem failed:`, err.message);
+        }
+        
+        if (!langInfo && storeData) {
+            const language = storeData.language || 'nodejs';
+            const isStreamlit = storeData.metadata?.isStreamlit || false;
+            const { LANGUAGE_CONFIGS } = await import('../../lib/detector.js');
+            const config = LANGUAGE_CONFIGS[language] || LANGUAGE_CONFIGS.nodejs;
+            
+            langInfo = {
+                language,
+                config,
+                isStreamlit,
+                detectedFile: 'store metadata'
+            };
+            console.log(`[${id}] Using language from store: ${language}`);
+        }
         
         if (!langInfo) {
             return ApiResponse.badRequest(res, 'Could not detect project language');
@@ -133,7 +222,30 @@ export function setupRoutes(app, projectsPath) {
         await stopProject(id);
         await new Promise(r => setTimeout(r, 1000));
         
-        const langInfo = await detectLanguage(projectPath);
+        const storeData = getAllProjects().find(p => p.folder === id);
+        let langInfo = null;
+        
+        try {
+            langInfo = await detectLanguage(projectPath);
+        } catch (err) {
+            console.log(`[${id}] Language detection from filesystem failed:`, err.message);
+        }
+        
+        if (!langInfo && storeData) {
+            const language = storeData.language || 'nodejs';
+            const isStreamlit = storeData.metadata?.isStreamlit || false;
+            const { LANGUAGE_CONFIGS } = await import('../../lib/detector.js');
+            const config = LANGUAGE_CONFIGS[language] || LANGUAGE_CONFIGS.nodejs;
+            
+            langInfo = {
+                language,
+                config,
+                isStreamlit,
+                detectedFile: 'store metadata'
+            };
+            console.log(`[${id}] Using language from store: ${language}`);
+        }
+        
         if (!langInfo) {
             return ApiResponse.badRequest(res, 'Could not detect project language');
         }
@@ -158,7 +270,20 @@ export function setupRoutes(app, projectsPath) {
         const detected = detectLanguageFromFiles(files);
         const lang = language || detected.language;
         
-        let processedFiles = { ...files };
+        const rootFolder = Object.keys(files)[0]?.split('/')[0] || '';
+        
+        const strippedFiles = {};
+        for (const [filepath, content] of Object.entries(files)) {
+            let strippedPath = filepath;
+            if (rootFolder && filepath.startsWith(rootFolder + '/')) {
+                strippedPath = filepath.substring(rootFolder.length + 1);
+            }
+            if (strippedPath) {
+                strippedFiles[strippedPath] = content;
+            }
+        }
+        
+        let processedFiles = { ...strippedFiles };
         if (lang === 'nodejs') processedFiles = scaffoldNodeJS(processedFiles);
         if (lang === 'python' || lang === 'streamlit') processedFiles = scaffoldPython(processedFiles);
         
@@ -195,13 +320,14 @@ export function setupRoutes(app, projectsPath) {
         return ApiResponse.success(res, { projects: result });
     });
 
-    app.get('/api/deployed/:id', (req, res) => {
-        const project = getProject(req.params.id);
+    app.get('/api/deployed/:folder', (req, res) => {
+        const folder = req.params.folder;
+        const project = getAllProjects().find(p => p.folder === folder);
         if (!project) {
             return ApiResponse.notFound(res, 'Project not found');
         }
         
-        const status = getProjectStatus(req.params.id);
+        const status = getProjectStatus(folder);
         
         return ApiResponse.success(res, {
             project: {
@@ -220,25 +346,27 @@ export function setupRoutes(app, projectsPath) {
         });
     });
 
-    app.post('/api/deployed/:id/start', asyncHandler(async (req, res) => {
-        const project = getProject(req.params.id);
+    app.post('/api/deployed/:folder/start', asyncHandler(async (req, res) => {
+        const folder = req.params.folder;
+        const project = getAllProjects().find(p => p.folder === folder);
         if (!project) {
             return ApiResponse.notFound(res, 'Project not found');
         }
         
-        const projectPath = `${projectsPath}/${project.folder}`;
+        const projectPath = `${projectsPath}/${folder}`;
         const langInfo = await detectLanguage(projectPath);
         
         if (!langInfo) {
             return ApiResponse.badRequest(res, 'Could not detect project language');
         }
         
-        const result = await startProject(project.folder, projectPath, langInfo.config, langInfo.isStreamlit);
+        const result = await startProject(folder, projectPath, langInfo.config, langInfo.isStreamlit);
         return ApiResponse.success(res, result);
     }));
 
-    app.put('/api/deployed/:id', asyncHandler(async (req, res) => {
-        const project = getProject(req.params.id);
+    app.put('/api/deployed/:folder', asyncHandler(async (req, res) => {
+        const folder = req.params.folder;
+        const project = getAllProjects().find(p => p.folder === folder);
         if (!project) {
             return ApiResponse.notFound(res, 'Project not found');
         }
@@ -251,28 +379,29 @@ export function setupRoutes(app, projectsPath) {
             if (lang === 'nodejs') processedFiles = scaffoldNodeJS(processedFiles);
             if (lang === 'python' || lang === 'streamlit') processedFiles = scaffoldPython(processedFiles);
             
-            await writeProjectFiles(req.params.id, processedFiles, projectsPath);
+            await writeProjectFiles(folder, processedFiles, projectsPath);
             project.files = processedFiles;
         }
         
         if (name) project.name = name;
         if (cfg) project.config = { ...project.config, ...cfg };
         
-        updateProject(req.params.id, project);
+        updateProject(project.id, project);
         
-        return ApiResponse.success(res, { projectId: req.params.id }, 'Project updated successfully');
+        return ApiResponse.success(res, { projectId: project.id, folder: project.folder }, 'Project updated successfully');
     }));
 
-    app.delete('/api/deployed/:id', asyncHandler(async (req, res) => {
-        const project = getProject(req.params.id);
+    app.delete('/api/deployed/:folder', asyncHandler(async (req, res) => {
+        const folder = req.params.folder;
+        const project = getAllProjects().find(p => p.folder === folder);
         if (!project) {
             return ApiResponse.notFound(res, 'Project not found');
         }
         
-        await stopProject(req.params.id);
-        await deleteProjectFiles(req.params.id);
-        deleteProject(req.params.id);
+        await stopProject(folder);
+        await deleteProjectFiles(folder);
+        deleteProject(project.id);
         
-        return ApiResponse.success(res, { projectId: req.params.id }, 'Project deleted successfully');
+        return ApiResponse.success(res, { projectId: project.id, folder }, 'Project deleted successfully');
     }));
 }
