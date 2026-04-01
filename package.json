@@ -12,7 +12,14 @@
     "docker:prod": "docker-compose -f docker/docker-compose.prod.yml up -d",
     "docker:prod:build": "docker build -t project-runner:latest -f docker/Dockerfile . && docker-compose -f docker/docker-compose.prod.yml up -d"
   },
-  "keywords": ["project-runner", "tunnel", "cloudflare", "ngrok", "bun", "sse"],
+  "keywords": [
+    "project-runner",
+    "tunnel",
+    "cloudflare",
+    "ngrok",
+    "bun",
+    "sse"
+  ],
   "author": "",
   "license": "ISC",
   "type": "module",

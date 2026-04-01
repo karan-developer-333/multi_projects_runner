@@ -10,7 +10,11 @@ const app = createApp({
     projectsPath: process.cwd() + '/projects',
     setupRoutes
 });
-
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+});
 const server = app.listen(config.port, () => {
     console.log(`Project Runner Server v3.0.0 running on port ${config.port}`);
     console.log(`Environment: ${config.nodeEnv}`);

@@ -1,8 +1,8 @@
 export class ApiResponse {
-    static success(res, data, message = 'Success', statusCode = 200) {
+    static success(res, data = {}, message = 'Success', statusCode = 200) {
         return res.status(statusCode).json({
             success: true,
-            ...data,
+            data,
             message
         });
     }
@@ -14,6 +14,7 @@ export class ApiResponse {
     static error(res, message, code = 'ERROR', statusCode = 500) {
         return res.status(statusCode).json({
             success: false,
+            data: null,
             error: {
                 code,
                 message
